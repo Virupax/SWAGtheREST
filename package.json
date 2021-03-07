@@ -1,0 +1,24 @@
+{
+  "name": "swagtherest",
+  "version": "1.0.0",
+  "description": "Demonstrate REST like APIs and SWAGGER",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "keywords": [
+    "REST",
+    "SWAGGER",
+    "CORS"
+  ],
+  "author": "Virupaxgouda C KumbarKattimani",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "mariadb": "^2.5.3",
+    "swagger-jsdoc": "^7.0.0-rc.4",
+    "swagger-ui-express": "^4.1.6"
+  }
+}
