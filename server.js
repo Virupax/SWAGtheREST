@@ -1,8 +1,9 @@
 const express = require('express');
-const bodyParser = require('body-parser');
 const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 const cors = require('cors');
+const multer = require('multer');
+const upload = multer();
 const app = express();
 const port = 3000;
 
@@ -29,8 +30,9 @@ const options = {
 };
 const specs = swaggerJsdoc(options);
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.json());
+app.use(express.urlencoded()); 
+app.use(upload.array());
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(specs));
 app.use(cors());
 
@@ -38,7 +40,7 @@ app.use(cors());
  * @swagger
  * /customers:
  *    get:
- *      description: Return all customers
+ *      summary: Return all customers
  *      produces:
  *          - application/json
  *      responses:
@@ -68,7 +70,7 @@ app.get('/customers',(req, res) => {
  * @swagger
  * /orders:
  *    get:
- *      description: Return all orders
+ *      summary: Return all orders
  *      produces:
  *          - application/json
  *      responses:
@@ -98,7 +100,7 @@ app.get('/orders',(req, res) => {
  * @swagger
  * /students:
  *    get:
- *      description: Return all students
+ *      summary: Return all students
  *      produces:
  *          - application/json
  *      responses:
@@ -129,7 +131,38 @@ app.get('/students',(req, res) => {
  * @swagger
  * /agent:
  *    post:
- *      description: Insert a new record for agent
+ *      summary: Insert a new record for agent
+ *      parameters:
+ *        - in: formData
+ *          name: AGENT_CODE
+ *          schema:
+ *            type: string
+ *          required: true
+ *        - in: formData
+ *          name: AGENT_NAME
+ *          schema:
+ *            type: string
+ *          required: true
+ *        - in: formData
+ *          name: WORKING_AREA
+ *          schema:
+ *            type: string
+ *          required: true
+ *        - in: formData
+ *          name: COMMISSION
+ *          schema:
+ *            type: string
+ *          required: true
+ *        - in: formData
+ *          name: PHONE_NO
+ *          schema:
+ *            type: string
+ *          required: true
+ *        - in: formData
+ *          name: COUNTRY
+ *          schema:
+ *            type: string
+ *          required: true
  *      produces:
  *          - application/json
  *      responses:
@@ -140,19 +173,31 @@ app.get('/students',(req, res) => {
  */
 app.post('/agent', function(req,res){
   //By default I am requiring all of them
-  let sql ="insert into agents (AGENT_CODE, AGENT_NAME, WORKING_AREA, COMMISSION, PHONE_NO, COUNTRY) values (?)";
-  let values = [req.body.AGENT_CODE, req.body.AGENT_NAME, req.body.WORKING_AREA,req.body.COMMISSION,req.body.PHONE_NO,req.body.COUNTRY];
-  dbcon.query(sql, [values], function(err, data, fields){
-  
-        if (error) {
+  pool.getConnection()
+    .then(conn => {
+      let sql ="insert into agents (AGENT_CODE, AGENT_NAME, WORKING_AREA, COMMISSION, PHONE_NO, COUNTRY) values (?)";
+      let values = [req.body.AGENT_CODE, req.body.AGENT_NAME, req.body.WORKING_AREA,req.body.COMMISSION,req.body.PHONE_NO,req.body.COUNTRY];
+      conn.query(sql, [values])
+      .then(result => {
+        res.json({
+          status: 200,
+          message: "Successfully inserted new record."
+        });
+        conn.end();
+      })
+      .catch(err => {
+        console.log(err);
+        conn.end();
+        if (err) {
           res.json({
             status: 500,
-            message: "Could not insert new record."
-          })  
-        };
-        res.end(JSON.stringify(data));
-        conn.end();
+            message: "Could not insert new record. Error Code:" + err.code
+          });
+        }
       });
+    })
+    .catch(err => {
+    });
   });
 
 
@@ -160,42 +205,173 @@ app.post('/agent', function(req,res){
  * @swagger
  * /agent:
  *    put:
- *      description: Return all students
+ *      summary: Updates a existing record for agent
+ *      parameters:
+ *        - in: formData
+ *          name: AGENT_CODE
+ *          schema:
+ *            type: string
+ *          required: true
+ *        - in: formData
+ *          name: AGENT_NAME
+ *          schema:
+ *            type: string
+ *          required: true
+ *        - in: formData
+ *          name: WORKING_AREA
+ *          schema:
+ *            type: string
+ *          required: true
+ *        - in: formData
+ *          name: COMMISSION
+ *          schema:
+ *            type: string
+ *          required: true
+ *        - in: formData
+ *          name: PHONE_NO
+ *          schema:
+ *            type: string
+ *          required: true
+ *        - in: formData
+ *          name: COUNTRY
+ *          schema:
+ *            type: string
+ *          required: true
  *      produces:
  *          - application/json
  *      responses:
  *          200:
- *              description: Array of objects containing all students records
+ *              description: Successfully updated the record
+ *          500:
+ *              description: Internal Server Error, Could not update the record.
  */
- app.post('/agent/:id', function(req,res){
-
-
-  res.setHeader('Content-Type', 'application/json');
-	pool.getConnection()
-    .then(conn => {    
-      conn.query("SELECT * FROM agents WHERE AGENT_CODE=" + id)
-        .then((result) => {
-          if(result.AGENT_CODE == id){
-            let sql ="insert into agents (AGENT_CODE, AGENT_NAME, WORKING_AREA, COMMISSION, PHONE_NO, COUNTRY) values (?)";
-            let values = [req.body.AGENT_CODE, req.body.AGENT_NAME, req.body.WORKING_AREA,req.body.COMMISSION,req.body.PHONE_NO,req.body.COUNTRY];
-            dbcon.query(sql, [values], function(err, data, fields){          
-                if (error) throw error;
-                res.end(JSON.stringify(data));
-            });       
-          }
+ app.put('/agent', function(req,res){
+    pool.getConnection()
+    .then(conn => {
+      let sql ="UPDATE agents SET  AGENT_NAME = ?, WORKING_AREA = ?, COMMISSION = ?, PHONE_NO = ?, COUNTRY = ? WHERE AGENT_CODE = ?";
+      let values = [req.body.AGENT_NAME, req.body.WORKING_AREA,req.body.COMMISSION,req.body.PHONE_NO,req.body.COUNTRY, req.body.AGENT_CODE];
+      conn.query(sql, values)
+        .then(result => {
+          res.json({
+            status: 200,
+            message: "Successfully updated the record."
+          });
           conn.end();
         })
         .catch(err => {
-          console.log(err); 
+          console.log(err);
+          conn.end();
+          if (err) {
+            res.json({
+              status: 500,
+              message: "Could not update the record. Error Code:" + err.code
+            });
+          }
+        });
+    })
+    .catch(err => {
+    });
+  });
+
+
+/**
+ * @swagger
+ * /agent:
+ *    patch:
+ *      summary: Patches a existing record for agent
+ *      parameters:
+ *        - in: formData
+ *          name: AGENT_CODE
+ *          schema:
+ *            type: string
+ *          required: true
+ *        - in: formData
+ *          name: AGENT_NAME
+ *          schema:
+ *            type: string
+ *          required: true
+ *      produces:
+ *          - application/json
+ *      responses:
+ *          200:
+ *              description: Successfully patched the record
+ *          500:
+ *              description: Internal Server Error, Could not patch the record.
+ */
+ app.patch('/agent', function(req,res){
+  pool.getConnection()
+  .then(conn => {
+    let sql ="UPDATE agents SET  AGENT_NAME = ? WHERE AGENT_CODE = ?";
+    let values = [req.body.AGENT_NAME, req.body.AGENT_CODE];
+    conn.query(sql, values)
+      .then(result => {
+        res.json({
+          status: 200,
+          message: "Successfully patched the record."
+        });
+        conn.end();
+      })
+      .catch(err => {
+        console.log(err);
+        conn.end();
+        if (err) {
+          res.json({
+            status: 500,
+            message: "Could not patch the record. Error Code:" + err.code
+          });
+        }
+      });
+  })
+  .catch(err => {
+  });
+});
+
+
+/**
+ * @swagger
+ * /agent/{id}:
+ *    delete:
+ *      summary: Deletes an agent record for matching id
+ *      parameters:
+ *        - in: path
+ *          name: id
+ *          schema:
+ *            type: integer
+ *          required: true
+ *      produces:
+ *          - application/json
+ *      responses:
+ *          204:
+ *              description: Successfully deleted the record
+ *          500:
+ *              description: Internal Server Error, Could not delete the record.
+ */
+app.delete('/agent/:id', function (req, res) {
+  pool.getConnection()
+    .then(conn => {
+      let sql = "DELETE FROM agents WHERE AGENT_CODE = ?";
+      conn.query(sql, req.params.id)
+        .then(result => {
+          res.json({
+            status: 200,
+            message: "Successfully deleted the record."
+          });
           conn.end();
         })
-        
-    }).catch(err => {
+        .catch(err => {
+          console.log(err);
+          conn.end();
+          if (err) {
+            res.json({
+              status: 500,
+              message: "Could not delete the record. Error Code:" + err.code
+            });
+          }
+        });
+    })
+    .catch(err => {
     });
-
-
-
-  });
+});
 
   
 app.listen(port, () => {
