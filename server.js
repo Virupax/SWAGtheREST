@@ -6,6 +6,8 @@ const multer = require('multer');
 const upload = multer();
 const app = express();
 const port = 3000;
+const axios = require('axios');
+const AWSLAMBDAGETURL = "https://gh8kerpd95.execute-api.us-east-1.amazonaws.com/default/my-function?keyword=";
 
 const mariadb = require('mariadb');
 const pool = mariadb.createPool({
@@ -35,6 +37,24 @@ app.use(express.urlencoded());
 app.use(upload.array());
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(specs));
 app.use(cors());
+
+
+app.get('/say',(req, res) => {
+  axios.get(AWSLAMBDAGETURL + req.query.keyword)
+  .then(function (response) {
+    // handle success
+    console.log(response);
+    res.end(JSON.stringify(response.data));
+  })
+  .catch(function (error) {
+    // handle error
+    console.log(error);
+  })
+  .then(function () {
+    // always executed
+  });
+});
+
 
 /**
  * @swagger
